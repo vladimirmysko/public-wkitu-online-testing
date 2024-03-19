@@ -1,0 +1,182 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Answer {
+  id             Int             @id @default(autoincrement())
+  blob           Bytes
+  isRight        Boolean         @map("is_right")
+  question       Question        @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  questionId     Int             @map("question_id")
+  studentAnswers StudentAnswer[]
+
+  @@map("answers")
+}
+
+model EventLog {
+  id           Int        @id @default(autoincrement())
+  timeCode     String     @map("time_code")
+  event        String
+  testResult   TestResult @relation(fields: [testResultId], references: [id], onDelete: Cascade)
+  testResultId Int        @map("test_result_id")
+
+  @@map("event_logs")
+}
+
+model Group {
+  id       Int       @id @default(autoincrement())
+  name     String
+  tests    Test[]
+  students Student[]
+
+  @@map("groups")
+}
+
+model Question {
+  id      Int      @id @default(autoincrement())
+  blob    Bytes
+  test    Test     @relation(fields: [testId], references: [id], onDelete: Cascade)
+  testId  Int      @map("test_id")
+  answers Answer[]
+
+  @@map("questions")
+}
+
+model ScoreComparison {
+  letter String @id
+  digit  Float
+  start  Int
+  end    Int
+
+  @@map("score_comparisons")
+}
+
+model SessionKey {
+  id  Int    @id @default(autoincrement())
+  key String @unique
+
+  @@map("sessions_keys")
+}
+
+model Settings {
+  id               Int     @id @default(autoincrement())
+  minutesToTest    Int     @default(50) @map("minutes_to_test")
+  questionsPerTest Int     @default(25) @map("questions_per_test")
+  secondsToSkip    Int     @default(3) @map("seconds_to_skip")
+  eventLogging     Boolean @default(false) @map("event_logging")
+  faceCheck        Boolean @default(false) @map("face_check")
+  voiceRecording   Boolean @default(false) @map("voice_recording")
+  isTestingStarted Boolean @default(false) @map("is_testing_started")
+
+  @@map("settings")
+}
+
+model Student {
+  id             Int             @id @default(autoincrement())
+  fullName       String          @map("full_name")
+  iin            String
+  isActive       Boolean         @map("is_active")
+  group          Group           @relation(fields: [groupId], references: [id])
+  groupId        Int             @map("group_id")
+  studentPhoto   StudentPhoto?   @relation(fields: [studentPhotoId], references: [id])
+  studentPhotoId Int?            @map("student_photo_id")
+  studentAnswers StudentAnswer[]
+  testResult     TestResult[]
+
+  @@map("students")
+}
+
+model StudentAnswer {
+  id        Int     @id @default(autoincrement())
+  student   Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  studentId Int
+  answer    Answer  @relation(fields: [answerId], references: [id], onDelete: Cascade)
+  answerId  Int
+
+  @@unique([studentId, answerId])
+  @@map("students_answers")
+}
+
+model StudentPhoto {
+  id       Int       @id @default(autoincrement())
+  blob     Bytes?
+  students Student[]
+
+  @@map("students_photos")
+}
+
+model Test {
+  id          Int          @id @default(autoincrement())
+  author      String
+  department  String
+  discipline  String
+  fileName    String       @map("file_name")
+  language    String
+  addedAt     DateTime     @map("added_at")
+  groups      Group[]
+  testResults TestResult[]
+  questions   Question[]
+
+  @@map("tests")
+}
+
+model TestResult {
+  id           Int           @id @default(autoincrement())
+  addedAt      DateTime      @map("added_at")
+  digit        String
+  letter       String
+  percent      Int
+  fileName     String?       @map("file_name")
+  student      Student       @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  studentId    Int           @map("student_id")
+  test         Test          @relation(fields: [testId], references: [id], onDelete: Cascade)
+  testId       Int           @map("test_id")
+  eventLogs    EventLog[]
+  voiceRecords VoiceRecord[]
+
+  @@map("test_results")
+}
+
+model User {
+  id       Int    @id @default(autoincrement())
+  username String @unique
+  password String
+  role     Role
+
+  @@map("users")
+}
+
+model VoiceRecord {
+  id           Int        @id @default(autoincrement())
+  text         String
+  testResult   TestResult @relation(fields: [testResultId], references: [id], onDelete: Cascade)
+  testResultId Int        @map("test_result_id")
+
+  @@map("voice_records")
+}
+
+model WorkingService {
+  id     Int                  @id @default(autoincrement())
+  name   String
+  error  String?
+  status WorkingServiceStatus
+
+  @@map("working_services")
+}
+
+enum Role {
+  STUDENT
+  ADMIN
+  OPERATOR
+}
+
+enum WorkingServiceStatus {
+  DONE
+  ERROR
+  WORKING
+}
